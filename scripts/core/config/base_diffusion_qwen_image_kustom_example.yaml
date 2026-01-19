@@ -1,0 +1,75 @@
+job: extension
+config:
+  name: last
+  process:
+  - type: diffusion_trainer
+    training_folder: /app/checkpoints
+    device: cuda
+    network:
+      type: lora
+      linear: 32
+      linear_alpha: 32
+    save:
+      dtype: bf16
+      save_every: 500
+      max_step_saves_to_keep: 4
+      save_format: diffusers
+    datasets:
+    - folder_path: /dataset/images
+      caption_ext: txt
+      caption_dropout_rate: 0.05  # Diubah dari 0.0 ke 0.05 untuk variasi belajar
+      cache_latents_to_disk: true
+      resolution: [512, 768, 1024]
+      is_reg: false
+    train:
+      batch_size: 4
+      steps: 3000
+      # gradient_accumulation_steps: 1 # Aktifkan jika ingin hemat VRAM (misal batch 1, acc 4 = efektif batch 4)
+      lr: 0.0001
+      optimizer: adamw8bit
+      optimizer_args:
+        betas: [0.9, 0.999]
+        weight_decay: 0.0001
+        eps: 1e-08
+      lr_scheduler: cosine
+      lr_warmup_steps: 25
+      lr_scheduler_args:
+        num_cycles: 1
+        power: 1.0
+      loss_type: l2
+      gradient_checkpointing: true
+      noise_scheduler: flowmatch
+      timestep_type: weighted
+      dtype: bf16
+      cache_text_embeddings: true
+      train_unet: true
+      train_text_encoder: false
+      ema_config:
+        use_ema: true
+        ema_decay: 0.99
+    # --- FITUR BARU: SAMPLE (PREVIEW) ---
+    sample:
+      sampler: flowmatch
+      sample_every: 500 
+      width: 1024
+      height: 1024
+      prompts:
+        - "learning a new style" # Ganti dengan prompt tes yang relevan dengan dataset
+        - "woman with red hair, high quality"
+      neg: ""
+      seed: 42
+      walk_seed: true
+      guidance_scale: 4
+      sample_steps: 20
+    # ------------------------------------
+    model:
+      name_or_path: /cache/models
+      arch: qwen_image
+      quantize: true
+      qtype: uint3|/cache/hf_cache/qwen_image_torchao_uint3.safetensors
+      quantize_te: true
+      qtype_te: qfloat8
+      low_vram: true
+meta:
+  name: qwen_image_lora
+  version: '1.0'
